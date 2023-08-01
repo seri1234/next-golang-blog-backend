@@ -2,9 +2,11 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 type Post struct {
@@ -21,11 +23,17 @@ var posts = []Post{
 }
 
 func main() {
+	err := godotenv.Load(".env") // envファイルのパスを渡す。何も渡さないと、どうディレクトリにある、.envファイルを探す
+	if err != nil {
+		panic("Error loading .env file")
+	}
+	hostDomain := os.Getenv("HOST_DOMAIN")
+
 	router := gin.Default()
 	router.GET("/api/v1/posts", getPosts)
 	router.GET("/api/v1/post/:id", getPostByID)
 
-	router.Run("")
+	router.Run(hostDomain)
 }
 
 // getAlbums responds with the list of all albums as JSON.
