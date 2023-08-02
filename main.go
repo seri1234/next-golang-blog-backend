@@ -18,12 +18,12 @@ type Post struct {
 
 var posts = []Post{
 	{ID: "1", Title: "Blue Train", Date: time.Now(), Content: "This is ID1 Content This is ID1 Content This is ID1 Content This is ID1 Content This is "},
-	{ID: "2", Title: "Jeru", Date: time.Now(), Content: "This is ID1 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 Content"},
-	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Date: time.Now(), Content: "This is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 Content"},
+	{ID: "2", Title: "Jeru", Date: time.Now().AddDate(0, 0, 1), Content: "This is ID1 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 Content"},
+	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Date: time.Now().AddDate(0, 0, 2), Content: "This is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 Content"},
 }
 
 func main() {
-	err := godotenv.Load(".env") // envファイルのパスを渡す。何も渡さないと、どうディレクトリにある、.envファイルを探す
+	err := godotenv.Load(".env")
 	if err != nil {
 		panic("Error loading .env file")
 	}
@@ -36,7 +36,6 @@ func main() {
 	router.Run(hostDomain)
 }
 
-// getAlbums responds with the list of all albums as JSON.
 func getPosts(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, posts)
 }
@@ -44,8 +43,6 @@ func getPosts(c *gin.Context) {
 func getPostByID(c *gin.Context) {
 	id := c.Param("id")
 
-	// Loop over the list of albums, looking for
-	// an album whose ID value matches the parameter.
 	for _, a := range posts {
 		if a.ID == id {
 			c.IndentedJSON(http.StatusOK, a)
