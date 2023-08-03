@@ -21,12 +21,6 @@ type Post struct {
 	Content   string    `json:"contentHtml"`
 }
 
-var posts = []Post{
-	{ID: "1", Title: "Blue Train", CreatedAt: time.Now(), Content: "This is ID1 Content This is ID1 Content This is ID1 Content This is ID1 Content This is "},
-	{ID: "2", Title: "Jeru", CreatedAt: time.Now().AddDate(0, 0, 1), Content: "This is ID1 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 ContentThis is ID2 Content"},
-	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", CreatedAt: time.Now().AddDate(0, 0, 2), Content: "This is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 ContentThis is ID3 Content"},
-}
-
 var db *sql.DB
 
 func main() {
@@ -73,7 +67,15 @@ func main() {
 }
 
 func getPosts(c *gin.Context) {
+	posts, err := getAllPosts()
+
+	if err != nil {
+		log.Fatal(err)
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "all posts not found"})
+	}
+
 	c.IndentedJSON(http.StatusOK, posts)
+	fmt.Printf("allPosts found: %v\n", posts)
 }
 
 func getPostByID(c *gin.Context) {
@@ -86,7 +88,7 @@ func getPostByID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, post)
-	fmt.Printf("Posts found: %v\n", post)
+	fmt.Printf("Post found: %v\n", post)
 	return
 }
 
@@ -109,5 +111,30 @@ func postByID(id string) ([]Post, error) {
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("postByID %q: %v", id, err)
 	}
+
 	return post, nil
+}
+
+func getAllPosts() ([]Post, error) {
+	var posts []Post
+
+	rows, err := db.Query("SELECT id,title,created_at FROM posts")
+	if err != nil {
+		return nil, fmt.Errorf("getAllPosts : %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p Post
+		if err := rows.Scan(&p.ID, &p.Title, &p.CreatedAt); err != nil {
+			return nil, fmt.Errorf("getAllPosts : %v", err)
+		}
+		posts = append(posts, p)
+
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("getAllPosts : %v", err)
+		}
+	}
+
+	return posts, nil
 }
