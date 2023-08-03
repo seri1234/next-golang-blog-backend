@@ -91,7 +91,7 @@ func getPostByID(c *gin.Context) {
 }
 
 func postByID(id string) ([]Post, error) {
-	var posts []Post
+	var post []Post
 
 	rows, err := db.Query("SELECT * FROM posts WHERE id = ?", id)
 	if err != nil {
@@ -104,10 +104,10 @@ func postByID(id string) ([]Post, error) {
 		if err := rows.Scan(&p.ID, &p.Title, &p.Content, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("postByID %q: %v", id, err)
 		}
-		posts = append(posts, p)
+		post = append(post, p)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("postByID %q: %v", id, err)
 	}
-	return posts, nil
+	return post, nil
 }
