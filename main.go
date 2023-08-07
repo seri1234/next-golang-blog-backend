@@ -21,6 +21,11 @@ type Post struct {
 	Content   string    `json:"contentHtml"`
 }
 
+type PostInput struct {
+	Title   string `json:"title"`
+	Content string `json:"contentHtml"`
+}
+
 var db *sql.DB
 
 func main() {
@@ -62,6 +67,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/api/v1/posts", getPosts)
 	router.GET("/api/v1/post/:id", getPostByID)
+	router.POST("/api/v1/post", CreatePost)
 
 	router.Run(hostDomain)
 }
@@ -90,6 +96,37 @@ func getPostByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, post)
 	fmt.Printf("Post found: %v\n", post)
 	return
+}
+
+func CreatePost(c *gin.Context) {
+	var post PostInput
+	if err := c.BindJSON(&post); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	stmt, err := db.Prepare("INSERT INTO posts(title, content) VALUES (?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(post.Title, post.Content)
+	if err != nil {
+		log.Fatal(err)
+	}
+	LastID, err := res.LastInsertId()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rowCnt, err := res.RowsAffected()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("CreateComptration ID = %d, affected = %d\n", LastID, rowCnt)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
 
 func postByID(id string) ([]Post, error) {
@@ -135,6 +172,5 @@ func getAllPosts() ([]Post, error) {
 			return nil, fmt.Errorf("getAllPosts : %v", err)
 		}
 	}
-
 	return posts, nil
 }
