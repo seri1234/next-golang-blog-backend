@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -115,7 +116,7 @@ func CreatePost(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	LastID, err := res.LastInsertId()
+	lastID, err := res.LastInsertId()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,10 +124,18 @@ func CreatePost(c *gin.Context) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("CreateComptration ID = %d, affected = %d\n", LastID, rowCnt)
+
+	c.Header("location", "localhost:3000/api/v1/post/"+strconv.FormatInt(lastID, 10))
+	c.JSON(http.StatusOK, gin.H{
+		"status": "200",
+		"data":   "succsess",
+	})
+
+	log.Printf("CreateComptration ID = %d, affected = %d \n", lastID, rowCnt)
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 }
 
 func postByID(id string) ([]Post, error) {
