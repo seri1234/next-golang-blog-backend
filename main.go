@@ -68,7 +68,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/api/v1/posts", getPosts)
 	router.GET("/api/v1/post/:id", getPostByID)
-	router.POST("/api/v1/post", CreatePost)
+	router.POST("/api/v1/post", postPost)
 
 	router.Run(hostDomain)
 }
@@ -99,36 +99,30 @@ func getPostByID(c *gin.Context) {
 	return
 }
 
-func CreatePost(c *gin.Context) {
+func postPost(c *gin.Context) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		panic("Error loading .env file")
+	}
+
+	hostDomain := os.Getenv("HOST_DOMAIN")
+
 	var post PostInput
 	if err := c.BindJSON(&post); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	stmt, err := db.Prepare("INSERT INTO posts(title, content) VALUES (?, ?)")
+	lastID, rowCnt, err := createPost(post)
 	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-
-	res, err := stmt.Exec(post.Title, post.Content)
-	if err != nil {
-		log.Fatal(err)
-	}
-	lastID, err := res.LastInsertId()
-	if err != nil {
-		log.Fatal(err)
-	}
-	rowCnt, err := res.RowsAffected()
-	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
+		return
 	}
 
-	c.Header("location", "localhost:3000/api/v1/post/"+strconv.FormatInt(lastID, 10))
+	c.Header("location", hostDomain+"/api/v1/post/"+strconv.FormatInt(lastID, 10))
 	c.JSON(http.StatusOK, gin.H{
 		"status": "200",
-		"data":   "succsess",
+		"data":   "success",
 	})
 
 	log.Printf("CreateComptration ID = %d, affected = %d \n", lastID, rowCnt)
@@ -182,4 +176,28 @@ func getAllPosts() ([]Post, error) {
 		}
 	}
 	return posts, nil
+}
+
+func createPost(post PostInput) (int64, int64, error) {
+	stmt, err := db.Prepare("INSERT INTO posts(title, content) VALUES (?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(post.Title, post.Content)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	lastID, err := res.LastInsertId()
+	if err != nil {
+		log.Fatal(err)
+	}
+	rowCnt, err := res.RowsAffected()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return lastID, rowCnt, err
 }
