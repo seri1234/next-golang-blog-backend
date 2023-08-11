@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -41,6 +42,7 @@ func main() {
 	dbUser := os.Getenv("DBUSER")
 	dbPass := os.Getenv("DBPASS")
 	dbAddr := os.Getenv("DBADDR")
+	frontUrl := os.Getenv("FRONT_URL")
 
 	locale, _ := time.LoadLocation("Asia/Tokyo")
 
@@ -66,6 +68,25 @@ func main() {
 	fmt.Println("Connected!")
 
 	router := gin.Default()
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			frontUrl,
+		},
+		AllowMethods: []string{
+			"POST",
+			"GET",
+		},
+		AllowHeaders: []string{
+			"Access-Control-Allow-Credentials",
+			"Access-Control-Allow-Headers",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"Authorization",
+		},
+	}))
+
 	router.GET("/api/v1/posts", getPosts)
 	router.GET("/api/v1/post/:id", getPostByID)
 	router.POST("/api/v1/post", postPost)
@@ -105,7 +126,7 @@ func postPost(c *gin.Context) {
 		panic("Error loading .env file")
 	}
 
-	hostDomain := os.Getenv("HOST_DOMAIN")
+	frontUrl := os.Getenv("FRONT_URL")
 
 	var post PostInput
 	if err := c.BindJSON(&post); err != nil {
@@ -119,7 +140,7 @@ func postPost(c *gin.Context) {
 		return
 	}
 
-	c.Header("location", hostDomain+"/api/v1/post/"+strconv.FormatInt(lastID, 10))
+	c.Header("location", frontUrl+"/posts/"+strconv.FormatInt(lastID, 10))
 	c.JSON(http.StatusOK, gin.H{
 		"status": "200",
 		"data":   "success",
