@@ -23,6 +23,11 @@ type Post struct {
 	Content   string    `json:"contentHtml"`
 }
 
+type Posts struct {
+	Posts      []Post `json:"allPosts"`
+	TotalCount int    `json:"totalCount"`
+}
+
 type PostInput struct {
 	Title   string `json:"title"`
 	Content string `json:"contentHtml"`
@@ -87,23 +92,73 @@ func main() {
 		},
 	}))
 
+	router.GET("/api/v1/postlist", getPostList)
 	router.GET("/api/v1/posts", getPosts)
 	router.GET("/api/v1/post/:id", getPostByID)
 	router.POST("/api/v1/post", postPost)
 
 	router.Run(hostDomain)
 }
+func getPostList(c *gin.Context) {
 
-func getPosts(c *gin.Context) {
 	posts, err := getAllPosts()
-
 	if err != nil {
 		log.Fatal(err)
 		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "all posts not found"})
 	}
 
-	c.IndentedJSON(http.StatusOK, posts)
-	fmt.Printf("allPosts found: %v\n", posts)
+	totalCount, err := getPostsTotalCount()
+	if err != nil {
+		log.Fatal(err)
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "posts total count not found"})
+	}
+
+	PostsData := Posts{
+		Posts:      posts,
+		TotalCount: totalCount,
+	}
+
+	c.IndentedJSON(http.StatusOK, PostsData)
+	fmt.Printf("allPosts found: %v\n", PostsData)
+}
+
+func getPosts(c *gin.Context) {
+	err := godotenv.Load(".env")
+	if err != nil {
+		panic("Error loading .env file")
+	}
+	perPage := os.Getenv("PER_PAGE")
+
+	var offset string
+	var limit string
+	if c.Query("offset") == "" && c.Query("limit") == "" {
+		offset = "0"
+		limit = perPage
+
+	} else {
+		offset = c.Query("offset")
+		limit = c.Query("limit")
+	}
+
+	posts, err := getsSpecifiedRangePosts(offset, limit)
+	if err != nil {
+		log.Fatal(err)
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "posts not found"})
+	}
+
+	totalCount, err := getPostsTotalCount()
+	if err != nil {
+		log.Fatal(err)
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "posts total count not found"})
+	}
+
+	PostsData := Posts{
+		Posts:      posts,
+		TotalCount: totalCount,
+	}
+
+	c.IndentedJSON(http.StatusOK, PostsData)
+	fmt.Printf("Posts found: %v\n", PostsData)
 }
 
 func getPostByID(c *gin.Context) {
@@ -180,6 +235,50 @@ func getAllPosts() ([]Post, error) {
 	var posts []Post
 
 	rows, err := db.Query("SELECT id,title,created_at FROM posts")
+	if err != nil {
+		return nil, fmt.Errorf("getAllPosts : %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var p Post
+		if err := rows.Scan(&p.ID, &p.Title, &p.CreatedAt); err != nil {
+			return nil, fmt.Errorf("getAllPosts : %v", err)
+		}
+		posts = append(posts, p)
+
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("getAllPosts : %v", err)
+		}
+	}
+	return posts, nil
+}
+
+func getPostsTotalCount() (int, error) {
+	var totalCount int
+
+	rows, err := db.Query("SELECT COUNT(id) FROM posts")
+	if err != nil {
+		return 0, fmt.Errorf("get posts total count : %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		if err := rows.Scan(&totalCount); err != nil {
+			return 0, fmt.Errorf("get posts total count : %v", err)
+		}
+
+		if err := rows.Err(); err != nil {
+			return 0, fmt.Errorf("get posts total count : %v", err)
+		}
+	}
+	return totalCount, nil
+}
+
+func getsSpecifiedRangePosts(offset string, limit string) ([]Post, error) {
+	var posts []Post
+
+	rows, err := db.Query("SELECT id,title,created_at FROM posts LIMIT ?, ?", offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("getAllPosts : %v", err)
 	}
