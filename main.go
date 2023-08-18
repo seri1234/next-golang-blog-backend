@@ -278,7 +278,7 @@ func getPostsTotalCount() (int, error) {
 func getsSpecifiedRangePosts(offset string, limit string) ([]Post, error) {
 	var posts []Post
 
-	rows, err := db.Query("SELECT id,title,created_at FROM posts LIMIT ?, ?", offset, limit)
+	rows, err := db.Query("SELECT id,title,created_at FROM posts ORDER BY created_at  desc LIMIT ?, ?", offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("getAllPosts : %v", err)
 	}
